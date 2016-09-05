@@ -1,0 +1,85 @@
+import csv
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+from sklearn.ensemble import RandomForestClassifier
+import itertools
+import copy
+from sklearn.metrics import confusion_matrix
+from sklearn.metrics import precision_recall_fscore_support
+#from sklearn.neural_network import MLPClassifier
+from sklearn import svm
+import datetime
+pd.set_option('display.max_columns', None)
+
+
+############################################################################
+# Function to Write result in csv file to submit 
+###########################################################################
+
+def write_to_csv(output):
+    now = datetime.datetime.now()
+    sub_file = 'submission_' + str(score) + '_' + str(now.strftime("%Y-%m-%d-%H-%M")) + '.csv'
+    print('Writing submission: ', sub_file)
+    f = open(sub_file, 'w')
+    prediction_file_object = csv.writer(f)
+    prediction_file_object.writerow(["activity_id","outcome"])  # don't forget the headers
+
+    for i in range(len(df_test)):
+        prediction_file_object.writerow([df_test["activity_id"][df_test.index[i]], int(output[i])])
+
+
+############################################################################
+# Function to process features 
+###########################################################################
+
+def process_features(train,test,people):
+    tables=[train,test]
+    for table in tables: 
+        # clean activity id
+        table['activity_category'] = table['activity_category'].str.lstrip('type ').astype(np.int32)
+
+        for i in range(1, 11):
+            table['char_' + str(i)].fillna('type -999', inplace=True) # replace nan by -999
+            table['char_' + str(i)] = table['char_' + str(i)].str.lstrip('type ').astype(np.int32)
+        # separate date in Y , M , D and add day of week, since weekend seems important
+        table['date']) = pd.to_datetime(table['date'])
+        table['year'] = table['date'].dt.year # create a column for year, month and day
+        table['month'] = table['date'].dt.month
+        table['day'] = table['date'].dt.day
+        table['day_of_week'] = table['date'].dt.dayofweek
+        table.drop('date', axis=1, inplace=True) # delete the date column
+    
+    
+    people['date']) = pd.to_datetime(people['date'])
+    people['year'] = people['date'].dt.year # create a column for year, month and day
+    people['month'] = people['date'].dt.month
+    people['day'] = people['date'].dt.day
+    people['day_of_week'] = people['date'].dt.dayofweek
+    people.drop('date', axis=1, inplace=True) # delete the date column
+    people['group_1'] = people['group_1'].str.lstrip('group ').astype(np.int32)
+    for i in range(1, 10):
+        people['char_' + str(i)] = people['char_' + str(i)].str.lstrip('type ').astype(np.int32)
+    for i in range(10, 38):
+        people['char_' + str(i)] = people['char_' + str(i)].astype(np.int32)
+    
+    print("Merge...")
+    train = pd.merge(train, people, how='left', on='people_id', left_index=True)
+    train.fillna(-999, inplace=True)
+    test = pd.merge(test, people, how='left', on='people_id', left_index=True)
+    test.fillna(-999, inplace=True)
+
+############################################################################
+# Read files and merge  
+###########################################################################
+
+
+df_train = pd.read_csv("act_train.csv")
+df_test = pd.read_csv("act_test.csv")
+
+df_people =  pd.read_csv("people.csv")
+train = pd.merge(df_train, df_people, on='people_id', how='right')
+test = pd.merge(df_test, df_people, on='people_id', how='right')
+
+
+
